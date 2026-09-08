@@ -8,26 +8,25 @@
 :root{
   --bg:#ffffff; --fg:#1c2333; --muted:#5a6478; --line:#d5dae4;
   --box:#f4f6fa; --accent:#1f5fbf;
-  --hit:#ffd75e; --hit-fg:#3a2c00;
-  --dir:#dbe0e8; --dir-fg:#25303f;
+  --dir:#dbe0e8; --dir2:#eef1f5; --dir-fg:#25303f;
   --code:#0f2d5c; --code-bg:#eef3fb;
 }
 @media (prefers-color-scheme: dark){
   :root{
     --bg:#12161f; --fg:#e6e9f0; --muted:#a0a9bb; --line:#2c3444;
     --box:#1a2030; --accent:#7fb0ff;
-    --hit:#ffcf3f; --hit-fg:#2a2000;
-    --dir:#9aa5b5; --dir-fg:#141a24;
+    --dir:#9aa5b5; --dir2:#c8d0da; --dir-fg:#141a24;
     --code:#cfe0ff; --code-bg:#1b2334;
   }
 }
 *{box-sizing:border-box}
 body{
-  margin:0; padding:10px; background:var(--bg); color:var(--fg);
+  margin:0; padding:6px; background:var(--bg); color:var(--fg);
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   font-size:14px; line-height:1.4; max-width:none;
 }
-.card{background:var(--box); border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-bottom:6px}
+.card{background:var(--box); border:1px solid var(--line); border-radius:8px; padding:7px 9px; margin-bottom:6px}
+.card:last-child{margin-bottom:0}
 .lbl{font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; margin-bottom:5px}
 .row{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
 input[type=text]{
@@ -35,7 +34,7 @@ input[type=text]{
   width:130px; padding:6px 8px; text-transform:uppercase;
   background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:6px;
 }
-input[type=range]{flex:1; min-width:150px; accent-color:var(--accent)}
+input[type=range]{flex:1; min-width:140px; accent-color:var(--accent)}
 .num{font:700 20px ui-monospace,Consolas,monospace; min-width:2.2em; text-align:right; color:var(--accent)}
 button{
   font:inherit; padding:6px 12px; border-radius:6px; border:1px solid var(--line);
@@ -45,27 +44,30 @@ button.on{background:var(--accent); border-color:var(--accent); color:#fff; font
 button:hover{border-color:var(--accent)}
 :focus-visible{outline:3px solid var(--accent); outline-offset:2px}
 .hint{font-size:12px; color:var(--muted)}
-.strip{display:grid; grid-template-columns:repeat(26,1fr); gap:2px; margin-top:4px}
+
+.striplbl{font-size:11.5px; color:var(--muted); margin-top:7px; margin-bottom:2px}
+.wrap{overflow:hidden}
+.track{display:grid; grid-template-columns:repeat(78,1fr); width:300%; transition:transform .35s ease}
+.strip{display:grid; grid-template-columns:repeat(26,1fr)}
 .cell{
-  text-align:center; font:600 11px ui-monospace,Consolas,monospace; padding:4px 0;
-  border-radius:3px; background:var(--bg); border:1px solid var(--line); color:var(--muted);
+  text-align:center; font:600 11px/1 ui-monospace,Consolas,monospace; padding:5px 0;
+  background:var(--bg); border:1px solid var(--line); color:var(--muted);
 }
-.striplbl{font-size:11px; color:var(--muted); margin-top:6px}
+
 .pairs{display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:center; margin-top:2px}
 .pair{text-align:center; font:700 18px ui-monospace,Consolas,monospace}
 .pair span{display:block; border-radius:4px; padding:2px 10px; color:#16202e}
 .pair .ar{font:600 11px system-ui,sans-serif; color:var(--muted); background:none; padding:1px 0; line-height:1.2}
-.out{
-  background:var(--code-bg); color:var(--code); border:1px solid var(--line);
-  border-radius:6px; padding:8px 9px;
-}
+
+.out{background:var(--code-bg); color:var(--code); border:1px solid var(--line); border-radius:6px; padding:8px 9px}
 .konv{font:600 14px ui-monospace,Consolas,monospace; margin-bottom:6px}
 .seq{display:flex; flex-wrap:wrap; gap:9px}
 .byte{border-radius:5px; padding:2px 6px 3px 6px; text-align:center}
 .byte .bits{font:700 14.5px ui-monospace,Consolas,monospace; white-space:nowrap}
 .byte .cap{display:block; font-size:10px; font-weight:700; letter-spacing:.02em; line-height:1.3}
-.byte.dir{background:var(--dir); color:var(--dir-fg)}
 .byte.ltr{color:#16202e}
+.byte.dir{background:var(--dir2); color:var(--dir-fg)}
+.byte.dir .n1{background:var(--dir); border-radius:3px; padding:0 3px}
 .legend{font-size:11.5px; color:var(--muted); margin-top:6px}
 .copywrap{display:flex; align-items:center; gap:10px; margin-top:7px}
 .ok{color:var(--accent); font-size:12.5px; font-weight:600}
@@ -86,15 +88,15 @@ button:hover{border-color:var(--accent)}
 <div class="card">
   <div class="lbl">2 · Verschiebung</div>
   <div class="row">
-    <input type="range" id="shift" min="1" max="25" value="3" aria-label="Anzahl Stellen">
+    <input type="range" id="shift" min="1" max="15" value="3" aria-label="Anzahl Stellen">
     <span class="num" id="shiftNum">3</span>
     <span class="hint">Stellen</span>
     <button id="bLinks" type="button">◀ links</button>
     <button id="bRechts" type="button" class="on">rechts ▶</button>
   </div>
-  <div class="striplbl">Original</div>
-  <div class="strip" id="stripA"></div>
-  <div class="striplbl">Verschoben</div>
+  <div class="striplbl" id="lblA"></div>
+  <div class="wrap"><div class="track" id="trackA"></div></div>
+  <div class="striplbl">Verschlüsselt: der Buchstabe direkt darunter</div>
   <div class="strip" id="stripB"></div>
 </div>
 
@@ -104,20 +106,12 @@ button:hover{border-color:var(--accent)}
 </div>
 
 <div class="card">
-  <div class="lbl">4 · Konvention für die Richtung</div>
-  <div class="row">
-    <button id="k01" type="button" class="on">0 = links, 1 = rechts</button>
-    <button id="k10" type="button">1 = links, 0 = rechts</button>
-  </div>
-</div>
-
-<div class="card">
-  <div class="lbl">5 · Das im Teams-Chat senden</div>
+  <div class="lbl">4 · Das im Teams-Chat senden</div>
   <div class="out">
     <div class="konv" id="konvLine"></div>
     <div class="seq" id="seq"></div>
   </div>
-  <div class="legend">1. Byte = Verschiebung (7 Bit) + Richtung (1 Bit). Byte 2 bis 5 = die verschlüsselten Buchstaben als ASCII.</div>
+  <div class="legend">1. Byte: die ersten 4 Bit sind die Anzahl Stellen, die letzten 4 Bit die Richtung. Byte 2 bis 5 sind die verschlüsselten Buchstaben als ASCII.</div>
   <div class="copywrap">
     <button id="copy" type="button">Nachricht kopieren</button>
     <span id="copyMsg" class="ok" aria-live="polite"></span>
@@ -127,7 +121,6 @@ button:hover{border-color:var(--accent)}
 <script>
 (function(){
   var A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-  // je Buchstabe eine Farbfamilie: s = Originalbuchstabe, l = verschobener Buchstabe
   var HUES = [
     {s:"#ff9d94", l:"#ffdad5"},
     {s:"#8ec3f0", l:"#d5e7fa"},
@@ -135,24 +128,28 @@ button:hover{border-color:var(--accent)}
     {s:"#cfa6ee", l:"#ecdcf9"}
   ];
   var TXT = "#16202e";
+
   var wortEl=document.getElementById("wort"), hintEl=document.getElementById("wortHint");
   var shiftEl=document.getElementById("shift"), shiftNum=document.getElementById("shiftNum");
   var bL=document.getElementById("bLinks"), bR=document.getElementById("bRechts");
-  var k01=document.getElementById("k01"), k10=document.getElementById("k10");
-  var stripA=document.getElementById("stripA"), stripB=document.getElementById("stripB");
+  var trackA=document.getElementById("trackA"), stripB=document.getElementById("stripB");
+  var lblA=document.getElementById("lblA");
   var pairsEl=document.getElementById("pairs");
   var konvLine=document.getElementById("konvLine"), seqEl=document.getElementById("seq");
   var copyBtn=document.getElementById("copy"), copyMsg=document.getElementById("copyMsg");
 
-  var richtung="rechts";   // "links" | "rechts"
-  var konv="01";           // "01": 0=links,1=rechts   "10": 1=links,0=rechts
+  var richtung="rechts";
   var kopierText="";
+  var KONVTEXT="Konvention: 0 = links, 1 = rechts";
 
+  // Oben: gleitender Streifen mit dem Alphabet dreimal hintereinander
   var cellsA=[], cellsB=[];
-  for(var i=0;i<26;i++){
-    var a=document.createElement("div"); a.className="cell"; a.textContent=A[i];
-    stripA.appendChild(a); cellsA.push(a);
-    var b=document.createElement("div"); b.className="cell";
+  for(var i=0;i<78;i++){
+    var a=document.createElement("div"); a.className="cell"; a.textContent=A[i%26];
+    trackA.appendChild(a); cellsA.push(a);
+  }
+  for(var j=0;j<26;j++){
+    var b=document.createElement("div"); b.className="cell"; b.textContent=A[j];
     stripB.appendChild(b); cellsB.push(b);
   }
 
@@ -160,16 +157,6 @@ button:hover{border-color:var(--accent)}
     var s=(n>>>0).toString(2);
     while(s.length<len) s="0"+s;
     return s.slice(-len);
-  }
-  function block8(s){ return s.slice(0,4)+" "+s.slice(4,8); }
-
-  function byteEl(bitstr, caption, klasse){
-    var d=document.createElement("div");
-    d.className="byte "+klasse;
-    var c=document.createElement("span"); c.className="cap"; c.textContent=caption;
-    var b=document.createElement("span"); b.className="bits"; b.textContent=bitstr;
-    d.appendChild(c); d.appendChild(b);
-    return d;
   }
 
   function saubereEingabe(){
@@ -182,43 +169,46 @@ button:hover{border-color:var(--accent)}
     var wort=saubereEingabe();
     var n=parseInt(shiftEl.value,10);
     shiftNum.textContent=n;
-    var d=(richtung==="rechts") ? n : (26-n)%26;
+    var d=(richtung==="rechts") ? n : (26-n)%26;   // effektive Verschiebung nach rechts
 
     hintEl.textContent = wort.length===0 ? "Bitte ein Wort eingeben" : (wort.length+" von 4 Buchstaben");
     hintEl.className = wort.length===0 ? "warn" : "hint";
 
-    // Farbzuordnung: Spalte des Originalbuchstabens -> Farbfamilie
+    // Streifen verschieben: sichtbare Spalte j zeigt A[(j-d) mod 26]
+    var k = 26 + ((26 - d) % 26);
+    trackA.style.transform = "translateX(-"+(k/78*100)+"%)";
+    lblA.textContent = "Original, verschoben um "+n+" nach "+richtung;
+
+    // Farben zurücksetzen
+    for(var t=0;t<78;t++){ cellsA[t].style.background=""; cellsA[t].style.borderColor=""; cellsA[t].style.color=""; }
+    for(var u=0;u<26;u++){ cellsB[u].style.background=""; cellsB[u].style.borderColor=""; cellsB[u].style.color=""; }
+
+    // Farbzuordnung je Buchstabe des Wortes
     var farbe={};
     for(var i=0;i<wort.length;i++){
       var ix=wort.charCodeAt(i)-65;
       if(!(ix in farbe)) farbe[ix]=i%HUES.length;
     }
-
-    // Alphabetstreifen
-    for(var j=0;j<26;j++){
-      cellsB[j].textContent=A[(j+d)%26];
-      var f=(j in farbe) ? HUES[farbe[j]] : null;
-      if(f){
-        cellsA[j].style.background=f.s; cellsA[j].style.borderColor=f.s; cellsA[j].style.color=TXT;
-        cellsB[j].style.background=f.l; cellsB[j].style.borderColor=f.l; cellsB[j].style.color=TXT;
-      } else {
-        cellsA[j].style.background=""; cellsA[j].style.borderColor=""; cellsA[j].style.color="";
-        cellsB[j].style.background=""; cellsB[j].style.borderColor=""; cellsB[j].style.color="";
-      }
+    for(var key in farbe){
+      var ix2=parseInt(key,10), h=HUES[farbe[key]];
+      var spalte=(ix2+d)%26;          // Spalte, in der dieser Buchstabe jetzt steht
+      var tIdx=k+spalte;
+      cellsA[tIdx].style.background=h.s; cellsA[tIdx].style.borderColor=h.s; cellsA[tIdx].style.color=TXT;
+      cellsB[spalte].style.background=h.l; cellsB[spalte].style.borderColor=h.l; cellsB[spalte].style.color=TXT;
     }
 
     // Buchstabenpaare
     pairsEl.innerHTML="";
     var chiffre="", hueVon=[];
-    for(var k=0;k<wort.length;k++){
-      var o=wort.charCodeAt(k)-65, z=(o+d)%26;
+    for(var m=0;m<wort.length;m++){
+      var o=wort.charCodeAt(m)-65, z=(o+d)%26;
       chiffre+=A[z];
-      var h=HUES[farbe[o]]; hueVon.push(h);
+      var hh=HUES[farbe[o]]; hueVon.push(hh);
       var p=document.createElement("div"); p.className="pair";
-      var s1=document.createElement("span"); s1.textContent=A[o]; s1.style.background=h.s;
+      var s1=document.createElement("span"); s1.textContent=A[o]; s1.style.background=hh.s;
       var s2=document.createElement("span"); s2.className="ar";
       s2.textContent=(richtung==="rechts"?"▼ +":"▼ −")+n;
-      var s3=document.createElement("span"); s3.textContent=A[z]; s3.style.background=h.l;
+      var s3=document.createElement("span"); s3.textContent=A[z]; s3.style.background=hh.l;
       p.appendChild(s1); p.appendChild(s2); p.appendChild(s3);
       pairsEl.appendChild(p);
     }
@@ -228,21 +218,28 @@ button:hover{border-color:var(--accent)}
     }
 
     // Konvention und Bytes
-    var rBit = (konv==="01") ? (richtung==="rechts"?"1":"0") : (richtung==="rechts"?"0":"1");
-    var konvText = (konv==="01") ? "Konvention: 0 = links, 1 = rechts" : "Konvention: 1 = links, 0 = rechts";
-    konvLine.textContent=konvText;
+    var rBit = (richtung==="rechts") ? "1" : "0";
+    var nib1 = bits(n,4), nib2 = "000"+rBit;
+    konvLine.textContent=KONVTEXT;
 
     seqEl.innerHTML="";
-    var teile=[ block8(bits(n,7)+rBit) ];
-    seqEl.appendChild(byteEl(teile[0], "Verschiebung + Richtung", "dir"));
-    for(var m=0;m<chiffre.length;m++){
-      var bs=block8(bits(chiffre.charCodeAt(m),8));
+    var b1=document.createElement("div"); b1.className="byte dir";
+    b1.innerHTML='<span class="cap">Verschiebung | Richtung</span>'+
+                 '<span class="bits"><span class="n1">'+nib1+'</span> '+nib2+'</span>';
+    seqEl.appendChild(b1);
+
+    var teile=[nib1+" "+nib2];
+    for(var q=0;q<chiffre.length;q++){
+      var code=bits(chiffre.charCodeAt(q),8);
+      var bs=code.slice(0,4)+" "+code.slice(4,8);
       teile.push(bs);
-      var bEl=byteEl(bs, chiffre.charAt(m), "ltr");
-      bEl.style.background=hueVon[m].l;
+      var bEl=document.createElement("div"); bEl.className="byte ltr";
+      bEl.style.background=hueVon[q].l;
+      bEl.innerHTML='<span class="cap">'+chiffre.charAt(q)+'</span><span class="bits">'+bs+'</span>';
       seqEl.appendChild(bEl);
     }
-    kopierText = konvText + "\n" + teile.join("   ");
+
+    kopierText = KONVTEXT + "\n" + teile.join("   ");
     copyMsg.textContent="";
   }
 
@@ -252,19 +249,10 @@ button:hover{border-color:var(--accent)}
     bR.className = r==="rechts" ? "on" : "";
     update();
   }
-  function setKonv(k){
-    konv=k;
-    k01.className = k==="01" ? "on" : "";
-    k10.className = k==="10" ? "on" : "";
-    update();
-  }
-
   wortEl.addEventListener("input",update);
   shiftEl.addEventListener("input",update);
   bL.addEventListener("click",function(){setRichtung("links");});
   bR.addEventListener("click",function(){setRichtung("rechts");});
-  k01.addEventListener("click",function(){setKonv("01");});
-  k10.addEventListener("click",function(){setKonv("10");});
 
   copyBtn.addEventListener("click",function(){
     var t=kopierText;
