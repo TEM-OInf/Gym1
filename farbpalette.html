@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Farbpalette</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5c5c5c; --line: #c9c9c9;
+    --panel: #f3f3f3; --accent: #1e66c2; --accent-fg: #ffffff; --px-line: #8a8a8a;
+    --ok-bg: #d9f2dd; --ok-fg: #14531f; --err-bg: #fbd3d3; --err-fg: #7a1010;
+    --hl-bg: #ffb3b3; --hl-fg: #7a1010;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1e; --fg: #ececec; --muted: #a8a8a8; --line: #444;
+      --panel: #2a2a2d; --accent: #5aa0f2; --accent-fg: #101010; --px-line: #777;
+      --ok-bg: #1f4d28; --ok-fg: #c8f0cf; --err-bg: #5a1c1c; --err-fg: #ffd0d0;
+      --hl-bg: #8a2a2a; --hl-fg: #ffe0e0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 10px; background: var(--bg); color: var(--fg);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    max-width: none;
+  }
+  .tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--line); margin-bottom: 10px; }
+  .tabs button {
+    background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -2px;
+    padding: 6px 12px; font: inherit; font-weight: 600; color: var(--muted); cursor: pointer;
+  }
+  .tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+  .panel[hidden] { display: none; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+  button.btn {
+    font: inherit; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  button.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  /* Palette */
+  .pal { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; }
+  .sw {
+    display: flex; align-items: center; gap: 7px; padding: 4px 8px 4px 4px;
+    border: 2px solid var(--line); border-radius: 7px; background: var(--panel);
+    cursor: pointer; font: inherit;
+  }
+  .sw[aria-pressed="true"] { border-color: var(--accent); }
+  .sw .chip { width: 26px; height: 26px; border-radius: 4px; border: 1px solid var(--px-line); }
+  .sw .meta { text-align: left; line-height: 1.25; }
+  .sw .code { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; font-size: 14px; }
+  .sw .rgb { font-size: 11px; color: var(--muted); }
+
+  /* Pixelfeld */
+  .grid {
+    display: grid; grid-template-columns: repeat(6, 44px); gap: 2px;
+    width: max-content; padding: 2px; background: var(--px-line); border-radius: 3px;
+  }
+  .cell { width: 44px; height: 44px; border: 0; padding: 0; cursor: pointer; }
+  .cell:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+
+  .codebox {
+    margin-top: 10px; padding: 8px 10px; background: var(--panel); border-radius: 6px;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 15px; line-height: 1.9;
+  }
+  .codebox .lbl { font-family: system-ui, sans-serif; font-size: 13px; color: var(--muted); }
+  .run { display: inline-block; padding: 0 4px; border-radius: 4px; letter-spacing: 1px; }
+  .run.bad { background: var(--hl-bg); color: var(--hl-fg); font-weight: 700; }
+  .calc { font-family: system-ui, sans-serif; font-size: 13.5px; line-height: 1.7; }
+  .calc b { font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .msg { padding: 6px 10px; border-radius: 6px; margin-top: 8px; display: none; }
+  .msg.ok { display: block; background: var(--ok-bg); color: var(--ok-fg); }
+  .msg.err { display: block; background: var(--err-bg); color: var(--err-fg); }
+  .legend { font-size: 13px; color: var(--muted); }
+  @media (max-width: 480px) {
+    .grid { grid-template-columns: repeat(6, 34px); }
+    .cell { width: 34px; height: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="tabs" role="tablist">
+  <button role="tab" id="tab-enc" aria-selected="true" aria-controls="enc">Kodieren</button>
+  <button role="tab" id="tab-dec" aria-selected="false" aria-controls="dec">Dekodieren</button>
+</div>
+
+<!-- ===== Kodieren ===== -->
+<section id="enc" class="panel" role="tabpanel" aria-labelledby="tab-enc">
+  <div class="row">
+    <span class="legend">Farbe wählen, dann Pixel anklicken</span>
+    <button class="btn" id="enc-random">Zufallsbild</button>
+  </div>
+  <div class="pal" id="enc-pal"></div>
+  <div class="grid" id="enc-grid" aria-label="Pixelfeld" style="margin-top:8px"></div>
+  <div class="codebox">
+    <span class="lbl">Indizes (2 Bit pro Pixel):</span><br>
+    <span id="enc-idx"></span>
+    <div class="calc" id="enc-calc" style="margin-top:6px"></div>
+  </div>
+</section>
+
+<!-- ===== Dekodieren ===== -->
+<section id="dec" class="panel" role="tabpanel" aria-labelledby="tab-dec">
+  <div class="pal" id="dec-pal"></div>
+  <div class="codebox" id="dec-code" style="margin-top:8px"></div>
+  <div class="row">
+    <span class="legend">Farbe wählen, dann Pixel anklicken</span>
+  </div>
+  <div class="grid" id="dec-grid" aria-label="Pixelfeld"></div>
+  <div class="row">
+    <button class="btn" id="dec-new">Neue Aufgabe</button>
+    <button class="btn primary" id="dec-check">Überprüfung</button>
+  </div>
+  <div class="msg" id="dec-msg" role="status"></div>
+</section>
+
+<script>
+(function () {
+  const W = 6, ROWS = 3, N = W * ROWS, BITS = 2;
+  const PAL = [
+    { code: '00', rgb: [255, 255, 255] },
+    { code: '01', rgb: [230,  57,  70] },
+    { code: '10', rgb: [ 69, 123, 157] },
+    { code: '11', rgb: [ 26,  26,  26] }
+  ];
+  const css = i => 'rgb(' + PAL[i].rgb.join(',') + ')';
+  const rgbTxt = i => PAL[i].rgb.join(', ');
+
+  // ---------- Palette-Auswahl ----------
+  function makePalette(el, onPick) {
+    let sel = 1;
+    el.innerHTML = '';
+    const btns = PAL.map((p, i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'sw'; b.setAttribute('aria-pressed', i === sel);
+      b.innerHTML = '<span class="chip" style="background:' + css(i) + '"></span>'
+        + '<span class="meta"><span class="code">' + p.code + '</span><br>'
+        + '<span class="rgb">RGB ' + rgbTxt(i) + '</span></span>';
+      b.addEventListener('click', () => {
+        sel = i; btns.forEach((o, j) => o.setAttribute('aria-pressed', j === i)); onPick && onPick(i);
+      });
+      el.appendChild(b); return b;
+    });
+    return () => sel;
+  }
+
+  function makeGrid(el, getSel, onChange) {
+    el.innerHTML = '';
+    const cells = [];
+    for (let i = 0; i < N; i++) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'cell'; b.dataset.i = '0';
+      b.style.background = css(0);
+      b.setAttribute('aria-label', 'Zeile ' + (Math.floor(i / W) + 1) + ', Spalte ' + (i % W + 1));
+      b.addEventListener('click', () => {
+        const s = getSel(); b.dataset.i = s; b.style.background = css(s); onChange();
+      });
+      el.appendChild(b); cells.push(b);
+    }
+    return cells;
+  }
+  const state = cells => cells.map(b => +b.dataset.i);
+  const paint = (cells, arr) => cells.forEach((b, i) => { b.dataset.i = arr[i]; b.style.background = css(arr[i]); });
+  const randomImg = () => {
+    let a;
+    do { a = Array.from({ length: N }, () => Math.floor(Math.random() * PAL.length)); }
+    while (new Set(a).size < 3);
+    return a;
+  };
+
+  // ---------- Tabs ----------
+  const tabs = [...document.querySelectorAll('[role=tab]')];
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(o => { o.setAttribute('aria-selected', o === t); document.getElementById(o.getAttribute('aria-controls')).hidden = o !== t; });
+  }));
+  document.getElementById('dec').hidden = true;
+
+  // ---------- Kodieren ----------
+  const encSel = makePalette(document.getElementById('enc-pal'));
+  const encCells = makeGrid(document.getElementById('enc-grid'), encSel, renderEnc);
+  document.getElementById('enc-random').addEventListener('click', () => { paint(encCells, randomImg()); renderEnc(); });
+
+  function renderEnc() {
+    const idx = state(encCells);
+    document.getElementById('enc-idx').innerHTML =
+      idx.map((i, k) => '<span class="run">' + PAL[i].code + '</span>' + ((k + 1) % W === 0 && k < N - 1 ? '<br>' : '')).join('');
+    const direct = N * 24, tab = PAL.length * 24, pix = N * BITS;
+    document.getElementById('enc-calc').innerHTML =
+      'Ohne Palette: ' + N + ' Pixel &times; 24 Bit = <b>' + direct + ' Bit</b><br>'
+      + 'Mit Palette: Tabelle ' + PAL.length + ' &times; 24 Bit = ' + tab + ' Bit, Pixel ' + N + ' &times; ' + BITS + ' Bit = ' + pix
+      + ' Bit &rarr; <b>' + (tab + pix) + ' Bit</b>';
+  }
+  renderEnc();
+
+  // ---------- Dekodieren ----------
+  const decSel = makePalette(document.getElementById('dec-pal'));
+  const decMsg = document.getElementById('dec-msg'), decCodeEl = document.getElementById('dec-code');
+  let target = [];
+  const decCells = makeGrid(document.getElementById('dec-grid'), decSel, () => { decMsg.className = 'msg'; renderDec(null); });
+  document.getElementById('dec-new').addEventListener('click', newTask);
+  document.getElementById('dec-check').addEventListener('click', check);
+
+  function renderDec(bad) {
+    decCodeEl.innerHTML = '<span class="lbl">Indizes (2 Bit pro Pixel), zeilenweise:</span><br>'
+      + target.map((i, k) => '<span class="run' + (bad && bad.includes(k) ? ' bad' : '') + '">' + PAL[i].code + '</span>'
+        + ((k + 1) % W === 0 && k < N - 1 ? '<br>' : '')).join('');
+  }
+  function newTask() {
+    target = randomImg();
+    paint(decCells, Array(N).fill(0));
+    decMsg.className = 'msg'; renderDec(null);
+  }
+  function check() {
+    const cur = state(decCells), bad = [];
+    target.forEach((v, i) => { if (cur[i] !== v) bad.push(i); });
+    renderDec(bad);
+    if (!bad.length) {
+      decMsg.className = 'msg ok'; decMsg.textContent = 'Richtig! Das Bild stimmt mit den Indizes überein.';
+    } else {
+      decMsg.className = 'msg err';
+      decMsg.textContent = 'Noch nicht ganz: ' + bad.length + ' Pixel ' + (bad.length === 1 ? 'ist' : 'sind') + ' falsch (rot markiert).';
+    }
+  }
+  newTask();
+})();
+</script>
+</body>
+</html>
