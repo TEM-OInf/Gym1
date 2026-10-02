@@ -62,7 +62,6 @@
   // ===== Hier pro Prüfung anpassen =====
   var TITLE     = 'Leistungskontrolle';
   var FORMS_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=yIV0ZMJaJkaENBIf-eXWPNeyP6B8VlJOpeAKamLNSlVURFJMMTZXTEhKNEgyM1BFMkJYUE1ZMk1aUSQlQCNjPTEu';
-  var PAGE_URL  = 'https://tem-oinf.github.io/Gym1/LS%20Komprimierung.html';
   // =====================================
 
   document.title = TITLE;
@@ -111,7 +110,7 @@
     // ---- Startansicht ----
     document.getElementById('start').style.display = 'block';
     document.getElementById('secureLink').href =
-      'ms-edu-secureassessment:' + PAGE_URL + '?exam=1#enforceLockdown';
+      'ms-edu-secureassessment:' + location.origin + location.pathname + '?exam=1#enforceLockdown';
   }
 </script>
 
