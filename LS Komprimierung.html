@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prüfung</title>
+<style>
+  html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; background: #f3f3f3; }
+  body { display: flex; flex-direction: column; }
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 8px 16px; background: #fff; border-bottom: 1px solid #ddd;
+  }
+  header h1 { font-size: 16px; margin: 0; }
+  #status { font-size: 13px; color: #666; }
+  #status.ok { color: #1a7f37; }
+  #status.fail { color: #b42318; }
+  iframe { flex: 1; width: 100%; border: 0; background: #fff; }
+  footer { padding: 10px 16px; background: #fff; border-top: 1px solid #ddd; display: flex; gap: 16px; align-items: center; }
+  button, a.btn {
+    font-size: 18px; padding: 14px 28px; border: 0; border-radius: 6px;
+    background: #0f6cbd; color: #fff; cursor: pointer; text-decoration: none; display: inline-block;
+  }
+  button:disabled { background: #999; cursor: not-allowed; }
+  footer p { margin: 0; font-size: 13px; color: #555; }
+  #start { display: none; max-width: 560px; margin: 80px auto; text-align: center; }
+  .hint {
+    margin-top: 40px; padding: 16px 20px; background: #fff; border-left: 5px solid #0f6cbd;
+    border-radius: 6px; text-align: left; font-size: 16px; line-height: 1.5;
+  }
+  .hint b { color: #0f6cbd; }
+  #exam { display: none; flex: 1; flex-direction: column; }
+  #diag { font-size: 11px; color: #888; padding: 4px 16px; background: #fafafa; border-top: 1px solid #eee; word-break: break-all; }
+</style>
+</head>
+<body>
+
+<!-- Ansicht 1: im normalen Browser -->
+<div id="start">
+  <a id="secureLink" class="btn" href="#">Prüfung im gesicherten Modus starten</a>
+  <div class="hint">
+    <b>1.</b> Falls Windows fragt, ob «Take a Test» geöffnet werden darf: <b>bestätigen Sie</b>.<br>
+    <b>2.</b> Nach dem Absenden: Drücken Sie den Knopf <b>«Prüfung beenden»</b>.
+  </div>
+</div>
+
+<!-- Ansicht 2: innerhalb von Take a Test -->
+<div id="exam">
+  <header>
+    <h1 id="examTitle"></h1>
+    <span id="status"></span>
+  </header>
+  <iframe id="form" allowfullscreen></iframe>
+  <footer>
+    <button id="endBtn" disabled>Prüfung beenden</button>
+    <p>Klicken Sie zuerst im Formular auf «Absenden» und warten Sie die Bestätigung ab. Erst dann «Prüfung beenden».</p>
+  </footer>
+  <div id="diag"></div>
+</div>
+
+<script>
+  // ===== Hier pro Prüfung anpassen =====
+  var TITLE     = 'Leistungskontrolle';
+  var FORMS_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=yIV0ZMJaJkaENBIf-eXWPNeyP6B8VlJOpeAKamLNSlVURFJMMTZXTEhKNEgyM1BFMkJYUE1ZMk1aUSQlQCNjPTEu';
+  var PAGE_URL  = 'https://tem-oinf.github.io/diverse/formsSecure-Komprimierung.html';
+  // =====================================
+
+  document.title = TITLE;
+  document.getElementById('examTitle').textContent = TITLE;
+
+  var hasApi = (typeof SecureBrowser !== 'undefined') && !!SecureBrowser.security;
+  var examRequested = location.search.indexOf('exam=1') !== -1;
+
+  if (hasApi || examRequested) {
+    // ---- Prüfungsansicht ----
+    document.getElementById('exam').style.display = 'flex';
+    document.getElementById('form').src = FORMS_URL + '&embed=true';
+
+    var status = document.getElementById('status');
+    var btn    = document.getElementById('endBtn');
+    var diag   = document.getElementById('diag');
+
+    var info = 'typeof SecureBrowser: ' + typeof SecureBrowser;
+    if (hasApi) {
+      var methods = [];
+      for (var k in SecureBrowser.security) { methods.push(k); }
+      info += ' | security: ' + methods.join(', ');
+      try { info += ' | secure: ' + SecureBrowser.security.isEnvironmentSecure(); } catch (e) {}
+    }
+    info += ' | UA: ' + navigator.userAgent;
+    diag.textContent = info;
+
+    if (hasApi) {
+      status.textContent = 'Take-a-Test-API verfügbar';
+      status.className = 'ok';
+      btn.disabled = false;
+      btn.addEventListener('click', function () {
+        if (!confirm('Haben Sie die Prüfung abgesendet und die Bestätigung gesehen?')) return;
+        try {
+          SecureBrowser.security.close(true);
+        } catch (e) {
+          status.textContent = 'Schliessen fehlgeschlagen: ' + e;
+          status.className = 'fail';
+        }
+      });
+    } else {
+      status.textContent = 'Keine Take-a-Test-API gefunden. Beenden mit Ctrl+Alt+Entf.';
+      status.className = 'fail';
+    }
+  } else {
+    // ---- Startansicht ----
+    document.getElementById('start').style.display = 'block';
+    document.getElementById('secureLink').href =
+      'ms-edu-secureassessment:' + PAGE_URL + '?exam=1#enforceLockdown';
+  }
+</script>
+
+</body>
+</html>
