@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Der Montag, an dem alles kippte</title>
+<style>
+  :root{
+    --plum:#492C4B; --card:#3C2440; --edge:#7A5880;
+    --ink:#F6F1F6; --mut:#C7B4C9; --pink:#E72962; --ok:#4DDBA0;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--plum); color:var(--ink);
+    font-family:"Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:12px;
+  }
+  .wrap{width:100%; max-width:1180px; display:grid; grid-template-columns:1fr 280px; gap:22px; align-items:start}
+  .stage{min-height:440px; display:flex; flex-direction:column}
+  .when{font-size:12.5px; letter-spacing:1.4px; text-transform:uppercase; color:var(--mut); margin:0 0 5px}
+  h1{font-size:29px; line-height:1.2; margin:0 0 9px; font-weight:700}
+  p.story{font-size:17px; line-height:1.45; margin:0 0 12px}
+  .choices{display:flex; flex-direction:column; gap:8px; margin-top:auto}
+  .choice{
+    font-family:inherit; font-size:16px; line-height:1.35; text-align:left; cursor:pointer; color:var(--ink);
+    background:var(--card); border:1px solid var(--edge); border-radius:11px; padding:12px 15px;
+  }
+  .choice:hover{border-color:var(--pink)}
+  .choice:disabled{cursor:default}
+  .choice.good{border-color:var(--ok); background:rgba(77,219,160,.10)}
+  .choice.bad{border-color:var(--pink); background:rgba(231,41,98,.12)}
+  .choice.hide{display:none}
+  .feedback{font-size:15.5px; line-height:1.45; margin:11px 0 0; padding:11px 14px;
+    background:rgba(255,255,255,.07); border-radius:11px}
+  .next{
+    font-family:inherit; font-size:16px; font-weight:600; cursor:pointer; color:var(--ink);
+    background:var(--pink); border:1px solid var(--pink); border-radius:11px; padding:11px 20px;
+    margin-top:11px; align-self:flex-start;
+  }
+  .side{display:flex; flex-direction:column; gap:12px}
+  .pic{width:280px; height:280px; border-radius:14px; background:var(--card); overflow:hidden; flex:none}
+  .pic img{width:100%; height:100%; object-fit:cover; display:block}
+  .panel{background:rgba(255,255,255,.055); border-radius:14px; padding:12px 14px}
+  .panel h2{font-size:11.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--mut); margin:0 0 8px; font-weight:600}
+  .meter{height:9px; border-radius:6px; background:var(--card); overflow:hidden; margin-bottom:6px}
+  .meter i{display:block; height:100%; width:0; background:var(--pink); transition:width .3s}
+  .meterval{font-size:22px; font-weight:700; margin:0}
+  .meterlab{font-size:11.5px; color:var(--mut); margin:1px 0 0}
+  .log{font-size:12px; line-height:1.45; color:var(--mut); margin:0; padding-left:15px}
+  #game{position:relative; height:300px; background:var(--card); border-radius:12px; overflow:hidden}
+  .popup{
+    position:absolute; width:240px; border-radius:9px; padding:10px 12px; cursor:pointer;
+    font-size:13px; line-height:1.35; color:#1d1d1d; background:#f3f1f4; border:1px solid #cfc7d2;
+    box-shadow:0 6px 18px rgba(0,0,0,.35);
+  }
+  .popup b{display:block; font-size:13.5px; margin-bottom:3px}
+  .popup .src{display:block; margin-top:5px; font-size:11px; color:#6b5a6c}
+  .popup.sys{background:#e9eef7; border-color:#b9c6dd}
+  .popup.hit{outline:2px solid var(--ok)}
+  .popup.miss{outline:2px solid var(--pink)}
+  .gamebar{display:flex; justify-content:space-between; font-size:13px; color:var(--mut); margin-top:7px}
+  .merk{font-size:15px; line-height:1.5; margin:10px 0 0; padding-left:19px}
+  .merk li{margin-bottom:3px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stage">
+    <p class="when" id="when"></p>
+    <h1 id="title"></h1>
+    <p class="story" id="story"></p>
+    <div id="extra"></div>
+    <div class="choices" id="choices"></div>
+    <p class="feedback" id="feedback" hidden></p>
+    <button class="next" id="next" hidden>Weiter</button>
+  </div>
+
+  <div class="side">
+    <div class="pic"><img id="pic" src="bilder/start.webp" alt=""></div>
+    <div class="panel" id="status">
+      <h2>Schaden</h2>
+      <div class="meter"><i id="meter"></i></div>
+      <p class="meterval" id="meterval">0</p>
+      <p class="meterlab">von 10 möglichen</p>
+    </div>
+    <div class="panel" id="logbox">
+      <h2>Bisher passiert</h2>
+      <ul class="log" id="log"><li>Noch nichts. Guten Morgen.</li></ul>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  /* Namen hier austauschen. */
+  var N = { a: "Nico", b: "Yara" };
+
+  var schaden = 0, grobe = 0, os = "win", i = 0, logs = [];
+
+  var L = {
+    win: { nacht: "Windows: die aktiven Stunden", satz: "Ausserhalb der aktiven Stunden darf Windows neu starten." },
+    mac: { nacht: "Mac: «macOS-Updates installieren»", satz: "Der Mac installiert dann nachts, wenn er am Strom hängt." }
+  };
+
+  var el = function(id){ return document.getElementById(id); };
+  var whenEl = el("when"), titleEl = el("title"), storyEl = el("story"),
+      extraEl = el("extra"), choicesEl = el("choices"), fbEl = el("feedback"),
+      nextEl = el("next"), picEl = el("pic"), logEl = el("log");
+
+  function addLog(t){
+    if(!t) return;
+    logs.push(t);
+    logEl.innerHTML = logs.slice(-4).map(function(x){ return "<li>" + x + "</li>"; }).join("");
+  }
+
+  function hurt(n, t){
+    schaden = Math.min(schaden + n, 10);
+    el("meter").style.width = (schaden * 10) + "%";
+    el("meterval").textContent = schaden;
+    addLog(t);
+  }
+
+  var szenen = [
+
+    { when: "Montag, 07:52", title: "Zwanzig Minuten vor dem Vortrag", pic: "szene-1.webp", alt: "Jugendliche am Frühstückstisch vor einem Laptop mit Warnfenster",
+      story: "Sie klappen den Laptop auf. Oben rechts blinkt es: Updates sind bereit, ein Neustart wird fällig. Um 10:15 halten Sie Ihren Vortrag. Es ist die letzte Note dieses Semesters, und nach den beiden Prüfungen im Herbst entscheidet dieser Vortrag, ob am Schluss eine Vier steht oder eine Drei. Drei Wochen Vorbereitung liegen auf dem Bildschirm. Was tun Sie?",
+      choices: [
+        { t: "«Später erinnern» klicken und in Ruhe die Folien durchgehen", dmg: 2,
+          fb: "Später heisst bei Windows und macOS: irgendwann, wenn es gerade nicht passt. Das Update ist nicht weg, es wartet nur auf einen schlechteren Moment.",
+          log: "Update weggeklickt" },
+        { t: "Jetzt installieren, die vier Minuten nehmen", ok: true,
+          fb: "Unbequem, aber sauber. Vier Minuten jetzt sind besser als ein Neustart im falschen Moment.",
+          log: "Update installiert" },
+        { t: "Automatik und Neustartzeit einstellen, dann läuft es heute Nacht", ok: true,
+          fb: "Genau so ist es gedacht. Einmal eingestellt, nie mehr daran denken.",
+          log: "Automatik eingestellt" }
+      ] },
+
+    { when: "Montag, 10:15", title: "Der Vortrag", pic: "szene-2.webp", alt: "Figur vor dunkler Leinwand mit Fortschrittsbalken, Publikum in Silhouette",
+      storyFn: function(){
+        return schaden > 0
+          ? "Folie drei, Sie sind gerade im besten Teil. Der Beamer wird schwarz. «Updates werden installiert, 12 Prozent, schalten Sie den Computer nicht aus.» Sie drücken Tasten, nichts reagiert. In der zweiten Reihe hebt jemand das Handy. Ihr Rücken wird nass, Ihre Stimme wird höher, und Sie hören sich selbst sagen: «Also, eigentlich wäre jetzt die Grafik gekommen.» Bei 61 Prozent sagt niemand mehr etwas. Die Lehrperson notiert etwas."
+          : "Der Vortrag läuft durch, die Folien sitzen, die Note ist gerettet. Hinter Ihnen flucht jemand leise: sein Laptop startet gerade neu.";
+      },
+      q: "Warum ausgerechnet jetzt?",
+      choices: [
+        { t: "Weil der Neustart so lange verschoben wurde, bis das Gerät nicht mehr wartete", ok: true,
+          fb: "Richtig. Verschieben heisst nicht abschalten." },
+        { t: "Weil Windows und macOS zufällig neu starten", dmg: 1,
+          fb: "Nicht zufällig. Beide Systeme halten sich an das, was eingestellt ist. Steht da nichts, nehmen sie den nächstbesten Moment." },
+        { t: "Weil der Laptop zu alt ist", dmg: 1,
+          fb: "Mit dem Alter hat das nichts zu tun. Es hängt daran, wann der Neustart erlaubt ist." }
+      ] },
+
+    { when: "Montag, 12:10", title: "Drei Fenster, zwei Lügen", pic: "szene-3.webp", alt: "Mehrere Fenster schweben über einem Browser", game: true,
+      story: "In der Mensa öffnen Sie einen Link aus einer Gruppe. Klicken Sie weg, was von einer Website kommt. Lassen Sie stehen, was vom System kommt." },
+
+    { when: "Montag, 16:40", title: "Kein Zutritt", pic: "szene-4.webp", alt: "Grosses Schloss vor einem Handy, daneben ein zerbrochener Schlüssel",
+      story: "Instagram meldet: Passwort falsch. Sie haben es nicht geändert. Dasselbe Passwort benutzen Sie auch für den Musikdienst, für den Onlineshop, bei dem Sie bestellen, und für Ihre private Mailadresse. Wie kommt jemand da hinein, ohne Ihr Passwort zu raten?",
+      choices: [
+        { t: "Ein Dienst wurde gehackt, die Liste wird automatisch bei allen anderen durchprobiert", ok: true,
+          fb: "Genau. Niemand sitzt da und rät. Das läuft automatisch, mit Millionen Kombinationen aus alten Datenlecks.",
+          log: "Instagram gesperrt" },
+        { t: "Jemand hat beim Eintippen zugeschaut", dmg: 1,
+          fb: "Kommt vor, erklärt aber nicht, warum gleich mehrere Konten betroffen sind. Der übliche Weg führt über ein Datenleck bei einem anderen Dienst.",
+          log: "Instagram gesperrt" },
+        { t: "Das Passwort wurde Zeichen für Zeichen geknackt", dmg: 1,
+          fb: "Dafür müsste es sehr kurz sein. Viel häufiger stammt es aus einem Leck und wird einfach überall ausprobiert.",
+          log: "Instagram gesperrt" }
+      ] },
+
+    { when: "Dienstag, 07:30", title: "Der Hauptschlüssel", pic: "szene-5.webp", alt: "Bildkärtchen fliegen aus einem Handy davon",
+      storyFn: function(){
+        return "Über Nacht ist Ihr Mailkonto weg. Auf Ihrem Instagram stehen vierzehn Posts in gebrochenem Deutsch, dazwischen Ferienfotos von vor vier Jahren und ein Video aus dem Turnunterricht. " + N.a + " und " + N.b + " haben Nachrichten von Ihnen bekommen, in denen Sie um Geld bitten. Was machen Sie zuerst?";
+      },
+      choices: [
+        { t: "Das Passwort des Mailkontos ändern", ok: true,
+          fb: "Richtig, und zwar als Erstes. Über die Mailadresse lässt sich bei allen anderen Diensten das Passwort zurücksetzen. Solange die offen ist, bringt jede andere Änderung nichts.",
+          log: "Mailkonto gesichert" },
+        { t: "Instagram zurückholen, da ist der Schaden sichtbar", dmg: 2,
+          fb: "Verständlich, aber zu früh. Wer Ihr Mailkonto hat, setzt das Instagram-Passwort gleich wieder zurück. Zuerst die Mailadresse.",
+          log: "Instagram zuerst versucht" },
+        { t: "Allen schreiben, dass das nicht Sie waren", dmg: 1,
+          fb: "Wichtig, aber nicht als Erstes. Erst die Mailadresse zurückholen, sonst geht es weiter, während Sie schreiben.",
+          log: "Freunde gewarnt" }
+      ] },
+
+    { when: "Dienstag, 09:00", title: "Aufräumen", pic: "szene-6.webp", alt: "Liste mit pink markierten Zeilen und einer Lupe",
+      story: "Sie sitzen vor der Liste Ihrer Logins. Im Browser gibt es dafür ein Werkzeug, den Kennwort-Monitor. Was macht der?",
+      choices: [
+        { t: "Er vergleicht Ihre gespeicherten Kennwörter mit bekannten Datenlecks und meldet Treffer", ok: true,
+          fb: "Richtig. Das ist der Teil, der am schnellsten etwas bringt: Sie sehen, welche Passwörter Sie wirklich ändern müssen." },
+        { t: "Er verschlüsselt Ihre Kennwörter zusätzlich", dmg: 1,
+          fb: "Verschlüsselt werden sie ohnehin. Der Monitor vergleicht sie mit bekannten Datenlecks." },
+        { t: "Er sperrt Konten, sobald jemand Fremdes sich anmeldet", dmg: 1,
+          fb: "Das kann er nicht. Er warnt, wenn eines Ihrer Kennwörter in einem Leck aufgetaucht ist." }
+      ] },
+
+    { when: "Mittwoch, 20:00", title: "Damit das nicht nochmals passiert", pic: "szene-7.webp", alt: "Schlafender Laptop mit Schieberegler und Mondsichel",
+      storyFn: function(){
+        return "Zwei Einstellungen hätten die Woche verhindert. Die eine liegt " + (os === "win"
+          ? "unter «Einstellungen, Windows Update, erweiterte Optionen»"
+          : "unter «Systemeinstellungen, Allgemein, Softwareupdate»")
+          + ". Welche sorgt dafür, dass der Neustart nachts passiert und nicht im Vortrag?";
+      },
+      choices: [
+        { tFn: function(){ return L[os].nacht; }, ok: true,
+          fbFn: function(){ return "Richtig. " + L[os].satz; } },
+        { t: "Der Virenschutz", dmg: 1,
+          fb: "Der hält Schadsoftware ab, steuert aber keine Neustarts." },
+        { t: "Die Synchronisierung des Browsers", dmg: 1,
+          fb: "Die gleicht Favoriten und Kennwörter zwischen Geräten ab und hat mit Updates nichts zu tun." }
+      ] },
+
+    { when: "Mittwoch, 20:05", title: "Und die zweite Einstellung", pic: "szene-8.webp", alt: "Reihe verschiedener Schlüssel, einer davon gross und pink",
+      story: "Wie verhindern Sie, dass ein einziges Datenleck gleich alle Ihre Konten öffnet?",
+      choices: [
+        { t: "Für jedes Konto ein eigenes Passwort, erzeugt und gemerkt vom Passwortmanager", ok: true,
+          fb: "Richtig. Merken müssen Sie sich nur noch eines, nämlich das für den Manager." },
+        { t: "Das Passwort alle drei Monate leicht abwandeln", dmg: 1,
+          fb: "Aus Sommer2026 wird Herbst2026. Solche Muster probieren Angreifer zuerst durch." },
+        { t: "Ein besonders langes Passwort, dafür überall dasselbe", dmg: 2,
+          fb: "Länge hilft gegen Raten, nicht gegen ein Leck. Steht es einmal in einer Liste, nützt die Länge nichts mehr." }
+      ] }
+  ];
+
+  var POPUPS = [
+    { fake: true,  t: "Ihr Browser ist veraltet", b: "Jetzt aktualisieren, um sicher zu surfen.", s: "gratis-filme-stream.net" },
+    { fake: false, t: "Windows Update", b: "Updates sind bereit. Neustart heute Nacht.", s: "Systemmeldung" },
+    { fake: true,  t: "Flash Player Update nötig", b: "Dieses Video benötigt ein Update.", s: "clips-hd-viewer.com" },
+    { fake: false, t: "Softwareupdate", b: "Ihr Gerät ist auf dem neuesten Stand.", s: "Systemeinstellungen" },
+    { fake: true,  t: "Sicherheitswarnung", b: "3 Viren gefunden. Jetzt bereinigen.", s: "pc-schutz-sofort.info" }
+  ];
+
+  var SCHANDE = [
+    { t: "Nur noch Facebook",
+      p: "Ihre Konten sind weg, Ihre Eltern richten Ihnen ein neues ein. Es heisst Facebook. Ihre Tante kommentiert jedes Bild mit drei Ausrufezeichen. Ihre Mutter teilt den Link zu Ihrem Vortrag in einer Gruppe namens «Unsere Jugend von heute»." },
+    { t: "Das Tastentelefon",
+      p: "Sie erben das Zweithandy Ihres Onkels. Es hat Tasten, Snake und einen Akku, der zwei Wochen hält. Die Klasse findet das zwei Tage lang ironisch cool, danach schreibt Ihnen niemand mehr, weil Sie in keiner Gruppe mehr sind." },
+    { t: "Die Zettelwirtschaft",
+      p: "Alle Ihre Passwörter stehen neu auf einem laminierten Zettel im Portemonnaie. Einmal im Monat kontrolliert jemand, ob Sie ihn noch haben. Sie haben ihn einmal nicht mehr." }
+  ];
+
+  function setPic(file, alt){
+    picEl.src = "bilder/" + file;
+    picEl.alt = alt || "";
+  }
+
+  /* ---------------------------------------------------------- Startbild */
+  function intro(){
+    whenEl.textContent = "Eine Woche, acht Entscheidungen";
+    titleEl.textContent = "Der Montag, an dem alles kippte";
+    storyEl.textContent = "Sie entscheiden, was Ihre Figur tut. Jede Entscheidung hat Folgen, und am Schluss sehen Sie, wie teuer die Woche war.";
+    setPic("start.webp", "Laptop bei Nacht, darüber ein leuchtendes Update-Symbol");
+    extraEl.innerHTML = "";
+    fbEl.hidden = true; nextEl.hidden = true;
+    choicesEl.innerHTML = "";
+    [["Ich arbeite mit Windows", "win"], ["Ich arbeite mit einem Mac", "mac"]].forEach(function(p){
+      var b = document.createElement("button");
+      b.className = "choice";
+      b.textContent = p[0];
+      b.addEventListener("click", function(){ os = p[1]; i = 0; show(); });
+      choicesEl.appendChild(b);
+    });
+  }
+
+  /* ---------------------------------------------------------- Szenen */
+  function show(){
+    var s = szenen[i];
+    fbEl.hidden = true; nextEl.hidden = true;
+    extraEl.innerHTML = ""; choicesEl.innerHTML = "";
+    whenEl.textContent = s.when;
+    titleEl.textContent = s.title;
+    storyEl.textContent = s.storyFn ? s.storyFn() : s.story;
+    setPic(s.pic, s.alt);
+
+    if (s.game){ runGame(); return; }
+    if (s.q){
+      var q = document.createElement("p");
+      q.className = "story";
+      q.textContent = s.q;
+      extraEl.appendChild(q);
+    }
+    s.choices.forEach(function(c){ choicesEl.appendChild(makeBtn(c)); });
+  }
+
+  function makeBtn(c){
+    var b = document.createElement("button");
+    b.className = "choice";
+    b.textContent = c.tFn ? c.tFn() : c.t;
+    b.addEventListener("click", function(){
+      Array.prototype.forEach.call(choicesEl.children, function(x){
+        x.disabled = true;
+        if (x !== b) x.classList.add("hide");
+      });
+      b.classList.add(c.ok ? "good" : "bad");
+      if (c.dmg === 2) grobe++;
+      if (c.dmg) hurt(c.dmg, c.log); else addLog(c.log);
+      reveal(c.fbFn ? c.fbFn() : c.fb);
+    });
+    return b;
+  }
+
+  function reveal(text){
+    fbEl.textContent = text;
+    fbEl.hidden = false;
+    nextEl.hidden = false;
+    nextEl.textContent = (i === szenen.length - 1) ? "Auswertung" : "Weiter";
+  }
+
+  nextEl.addEventListener("click", function(){
+    if (grobe >= 2 || schaden >= 8){ schande(); return; }
+    i++;
+    if (i < szenen.length) show(); else auswertung();
+  });
+
+  /* ---------------------------------------------------------- Minispiel */
+  function runGame(){
+    extraEl.innerHTML = '<div id="game"></div><div class="gamebar"><span id="gtime">15 Sekunden</span><span id="gscore">0 von 3 gefälschten weggeklickt</span></div>';
+    var g = el("game"), treffer = 0, fehler = 0, offen = POPUPS.length, zeit = 15, fertig = false;
+    var spots = [[18,18],[300,118],[560,22],[70,168],[400,206]];
+
+    POPUPS.forEach(function(p, idx){
+      var d = document.createElement("div");
+      d.className = "popup" + (p.fake ? "" : " sys");
+      d.style.left = spots[idx][0] + "px";
+      d.style.top = spots[idx][1] + "px";
+      d.innerHTML = "<b>" + p.t + "</b>" + p.b + "<span class='src'>" + p.s + "</span>";
+      d.addEventListener("click", function(){
+        if (d.dataset.done) return;
+        d.dataset.done = "1";
+        if (p.fake){ treffer++; d.classList.add("hit"); } else { fehler++; d.classList.add("miss"); }
+        d.style.opacity = .35;
+        el("gscore").textContent = treffer + " von 3 gefälschten weggeklickt";
+        if (--offen === 0) finish();
+      });
+      g.appendChild(d);
+    });
+
+    var tick = setInterval(function(){
+      zeit--;
+      el("gtime").textContent = zeit + " Sekunden";
+      if (zeit <= 0) finish();
+    }, 1000);
+
+    function finish(){
+      if (fertig) return;
+      fertig = true;
+      clearInterval(tick);
+      var dmg = (3 - treffer) + fehler;
+      if (dmg) hurt(Math.min(dmg, 3), "Auf ein falsches Update geklickt");
+      var fb;
+      if (dmg === 0) fb = "Alle drei erwischt und die echten stehen gelassen. Das Merkmal ist die Herkunft: Ein Update, das eine Website anbietet, ist keines.";
+      else if (fehler) fb = "Sie haben auch eine echte Systemmeldung weggeklickt. Die kommt von Windows oder macOS und gehört nicht zur Website.";
+      else fb = "Da sind welche durchgekommen. Echte Updates kommen vom System, nie von einer Website. Je dringlicher ein Fenster klingt, desto verdächtiger ist es.";
+      reveal(fb);
+    }
+  }
+
+  /* ---------------------------------------------------------- Enden */
+  function merksaetze(){
+    var ul = document.createElement("ol");
+    ul.className = "merk";
+    ["Automatik und Neustartzeit einstellen, dann kommt kein Update im falschen Moment.",
+     "Ein eigenes Passwort pro Konto, erzeugt vom Passwortmanager.",
+     "Das Mailkonto ist der Hauptschlüssel. Fällt es, fällt der Rest."].forEach(function(t){
+      var li = document.createElement("li");
+      li.textContent = t;
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+
+  function restart(label){
+    var b = document.createElement("button");
+    b.className = "next";
+    b.textContent = label;
+    b.addEventListener("click", function(){
+      schaden = 0; grobe = 0; i = 0; logs = [];
+      el("meter").style.width = "0";
+      el("meterval").textContent = "0";
+      logEl.innerHTML = "<li>Noch nichts. Guten Morgen.</li>";
+      intro();
+    });
+    return b;
+  }
+
+  function schande(){
+    var s = SCHANDE[Math.floor(Math.random() * SCHANDE.length)];
+    whenEl.textContent = "Ende";
+    titleEl.textContent = s.t;
+    storyEl.textContent = s.p;
+    setPic("schande.webp", "Figur allein auf einem Sofa mit einem Tastentelefon");
+    extraEl.innerHTML = ""; choicesEl.innerHTML = "";
+    fbEl.hidden = true; nextEl.hidden = true;
+    extraEl.appendChild(restart("Nochmals, aber diesmal nachdenken"));
+  }
+
+  function auswertung(){
+    var t, p;
+    if (schaden === 0){
+      t = "Die langweiligste Woche Ihres Lebens";
+      p = "Der Vortrag sitzt, die Note steht. Ihr Laptop aktualisiert sich um halb drei nachts und fragt niemanden um Erlaubnis. Niemand postet in Ihrem Namen, niemand schreibt Ihren Freunden wegen Geld. Es ist nichts passiert, und das war harte Arbeit von genau zehn Minuten.";
+    } else if (schaden <= 3){
+      t = "Mit einem blauen Auge";
+      p = "Sie haben überlebt. Es existiert ein Video, aber nur sechzehn Sekunden lang, und darauf sieht man hauptsächlich Ihren Hinterkopf. Zwei Einstellungen mehr, und auch die sechzehn Sekunden gäbe es nicht.";
+    } else if (schaden <= 6){
+      t = "Eine Woche, die Sie gerne überspringen würden";
+      p = "Der Vortragsclip läuft noch in zwei Gruppenchats. Unter einem Ihrer gehackten Posts hat Ihr Onkel «Schön!» kommentiert, und niemand hat ihm bisher erklärt, warum das kein guter Moment war. Das meiste davon hing an zwei Einstellungen und an einem Passwort, das überall dasselbe war.";
+    } else {
+      t = "Legendär, aber falsch herum";
+      p = "Ihr Vortragsclip hat in der Klasse einen eigenen Namen. Ihre Mutter hat die halbe Verwandtschaft angerufen, um die Geldbitten zu dementieren, und dabei dreimal erklärt, was ein Hacker ist. Im Sekretariat kennt man Sie jetzt mit Vornamen. Die gute Nachricht: Alles, was diese Woche verhindert hätte, dauert zusammen keine zehn Minuten.";
+    }
+    whenEl.textContent = "Auswertung · " + schaden + " von 10";
+    titleEl.textContent = t;
+    storyEl.textContent = p;
+    setPic("szene-8.webp", "Reihe verschiedener Schlüssel, einer davon gross und pink");
+    extraEl.innerHTML = ""; choicesEl.innerHTML = "";
+    fbEl.hidden = true; nextEl.hidden = true;
+    extraEl.appendChild(merksaetze());
+    extraEl.appendChild(restart("Nochmals spielen"));
+  }
+
+  intro();
+})();
+</script>
+</body>
+</html>

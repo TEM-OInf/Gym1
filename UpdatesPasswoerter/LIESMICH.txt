@@ -1,0 +1,16 @@
+Der Montag, an dem alles kippte
+Textadventure zum Abschluss der Lektion "Updates und Passwoerter"
+
+HOCHLADEN
+1. Diesen Ordner "der-montag" als Ganzes ins Repo ziehen (Add file, Upload files).
+2. Der Ordner kann irgendwo unter Gym1 liegen, die Seite verweist nur relativ auf bilder/.
+3. Adresse danach: <Repo-Adresse>/der-montag/
+
+AENDERN
+- Namen der Freunde: in index.html ganz oben im Skript, Zeile "var N = { a: ..., b: ... }".
+- Texte und Antworten: im Skript im Block "szenen".
+- Bild ersetzen: neue Datei unter neuem Namen ablegen (z.B. szene-4-v2.webp) und den
+  Namen in der Szene anpassen. Gleicher Dateiname wird vom Browser zwischengespeichert.
+
+BILDER
+720 x 720 Pixel, WebP, zusammen rund 290 KB.
